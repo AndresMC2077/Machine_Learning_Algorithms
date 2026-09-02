@@ -2,6 +2,9 @@ import numpy as np
 import pandas as pd
 #solo para las metricas
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+import matplotlib.pyplot as plt
+import networkx as nx
+from sklearn.metrics import ConfusionMatrixDisplay
 
 #función de entropía inicial de la variable y 
 def entropy(y):
@@ -90,26 +93,89 @@ def predict(tree, row):
             return "Unknown"    
 
 #solo visualizar el arbol
-def print_tree(tree, indent="", branch="[Raíz]"):
-    """Imprime el árbol de forma recursiva con indentación."""
-    if tree["type"] == "leaf":
-        print(f"{indent} {branch} ---> Predicción: {tree['label']}")
-        return
+def plot_tree_graph(tree):
+    """Convierte el diccionario ID3 en un grafo y lo muestra en pantalla."""
+    G = nx.DiGraph()
+    node_id = 0
+    labels = {}
+    edge_labels = {}
 
-    feature = tree["feature"]
-    print(f"{indent} {branch} ¿{feature}?")
-    for value, child in tree["children"].items():
-        print_tree(child, indent + "    ", f"Si es '{value}'")
+    # Función recursiva para mapear el diccionario a NetworkX
+    def traverse(node, parent_id=None, branch_val=None, x=0, y=0, layer_width=1.0):
+        nonlocal node_id
+        current_id = node_id
+        node_id += 1
 
+        # Identificar si es nodo u hoja para la etiqueta
+        if node["type"] == "leaf":
+            labels[current_id] = f"Hoja:\n{node['label']}"
+            color = "lightgreen"
+        else:
+            labels[current_id] = f"¿{node['feature']}?"
+            color = "lightblue"
+            
+        # Agregamos el nodo con sus coordenadas (x, y)
+        G.add_node(current_id, pos=(x, y), color=color)
+
+        # Conectar con el padre si existe
+        if parent_id is not None:
+            G.add_edge(parent_id, current_id)
+            edge_labels[(parent_id, current_id)] = str(branch_val)
+
+        # Recursividad para los hijos
+        if node["type"] == "node":
+            children = node["children"]
+            n_children = len(children)
+            if n_children > 0:
+                # Matemáticas simples para que los nodos no se encimen
+                dx = layer_width / n_children
+                start_x = x - layer_width/2 + dx/2
+                for i, (val, child_node) in enumerate(children.items()):
+                    child_x = start_x + i * dx
+                    child_y = y - 1 # Bajamos un nivel en Y
+                    traverse(child_node, current_id, val, child_x, child_y, layer_width=dx*0.9)
+
+    # Iniciamos el recorrido
+    traverse(tree, x=0, y=0, layer_width=100)
+
+    # Extraer atributos para dibujar
+    pos = nx.get_node_attributes(G, 'pos')
+    colors = [node[1]['color'] for node in G.nodes(data=True)]
+
+    # Dibujar usando matplotlib
+    plt.figure(figsize=(10, 6))
+    nx.draw(G, pos, with_labels=True, labels=labels, 
+            node_size=3000, node_color=colors, 
+            font_size=10, font_weight="bold", arrows=False, edge_color="gray")
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_color='red')
+    
+    plt.title("Visualización del Árbol de Decisión ID3 (Custom)")
+    # El plt.show() abre la ventana interactiva y NO guarda el archivo
+    plt.show()
 
 #evaluar con metricas de desempeño, solo se usa sklearn en este paso
 def evaluate_tree(tree, df_test, target):
-    #Calcula métricas de clasificación para un dataset de prueba.
+    """Calcula métricas y muestra la matriz de confusión gráficamente."""
     y_true = df_test[target]
-    # Hacemos la predicción fila por fila
     y_pred = [predict(tree, row) for _, row in df_test.iterrows()]
     
     print("\n" + "="*40)
+    print("MÉTRICAS DE EVALUACIÓN")
+    print("="*40)
+    print(f"Exactitud (Accuracy): {accuracy_score(y_true, y_pred):.4f}\n")
+    print("Reporte de Clasificación:")
+    print(classification_report(y_true, y_pred, zero_division=0))
+    
+    # MAGIA GRÁFICA PARA LA MATRIZ DE CONFUSIÓN
+    disp = ConfusionMatrixDisplay.from_predictions(
+        y_true, 
+        y_pred, 
+        cmap="Blues", 
+        colorbar=True
+    )
+    disp.ax_.set_title("Matriz de Confusión")
+    plt.show() # Esto abre la gráfica de la matriz
+    
     print("MÉTRICAS DE EVALUACIÓN")
     print("="*40)
     print(f"Exactitud (Accuracy): {accuracy_score(y_true, y_pred):.4f}\n")
@@ -127,11 +193,13 @@ target = "Comprar"
 features = [col for col in df.columns if col != target]
 tree = ID3(df_train, target, features)
 print("estructura del arbol:")
-print_tree(tree)
+plot_tree_graph(tree)
 print("\nEvaluación del modelo:")
 evaluate_tree(tree, df_test, target)
 
-
+#conjuntos con los que se probó el modelo.
+print("\nConjunto de entrenamiento: ",df_train)
+print("\nConjunto de prueba: ",df_test)
 
 
 
