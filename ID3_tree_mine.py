@@ -27,10 +27,10 @@ def entropy_2(y,x):
         else:
             _H += 0
     return _H
-
+#funcion de information gain, diferencia de entropias
 def information_gain(y,x):
     return entropy(y) - entropy_2(y,x)
-
+#clase dominante del conjunto de datos, para cuando no hay más atributos o el conjunto está vacío
 def majority_class(y):
     mode_val=y.value_counts().index[0]
     return mode_val
@@ -194,12 +194,12 @@ features = [col for col in df.columns if col != target]
 tree = ID3(df_train, target, features)
 print("estructura del arbol:")
 plot_tree_graph(tree)
-print("\nEvaluación del modelo:")
+print("\nEvaluación del modelo:\n")
 evaluate_tree(tree, df_test, target)
 
 #conjuntos con los que se probó el modelo.
-print("\nConjunto de entrenamiento: ",df_train)
-print("\nConjunto de prueba: ",df_test)
+print("\nConjunto de entrenamiento: \n",df_train)
+print("\nConjunto de prueba: \n",df_test)
 
 
 
