@@ -200,6 +200,3 @@ evaluate_tree(tree, df_test, target)
 #conjuntos con los que se probó el modelo.
 print("\nConjunto de entrenamiento: \n",df_train)
 print("\nConjunto de prueba: \n",df_test)
-
-
-
